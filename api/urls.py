@@ -8,5 +8,8 @@ urlpatterns = [
 	path('createmeeting', views.create_meeting, name='create_meeting'),
 	path('getmanagers', views.get_managers, name='get_managers'),
 	path('getmeeting', views.get_meeting, name='get_meeting'),
-	path('getpath', views.get_path, name='get_path')
+	path('getpath', views.get_path, name='get_path'),
+	path('deletemanager', views.delete_manager, name='delete_manager'),
+	path('authorize', views.authorize, name='authorize'),
+	path('getmeetingsforday', views.get_meetings_for_day, name='get_meetings_for_day')
 ]

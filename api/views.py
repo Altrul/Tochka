@@ -46,10 +46,12 @@ def add_manager(request):
 		return JsonResponse(get_error('Field "name" not found'))
 	if 'surname' not in json:
 		return JsonResponse(get_error('Field "surname" not found'))
+	if 'phone' not in json:
+		return JsonResponse(get_error('Field "phone" not found'))
 
 	manager_token = generate_token()
 
-	manager = Manager.objects.create(name=json['name'], surname=json['surname'], token=manager_token)
+	manager = Manager.objects.create(name=json['name'], surname=json['surname'], phone=json['phone'], token=manager_token)
 
 	manager.save()
 
@@ -93,7 +95,9 @@ def create_meeting(request):
 
 	longitude, latitude = location
 
-	meeting = Meeting.objects.create(name=json['name'], surname=json['surname'], longitude=longitude, latitude=latitude, time=time, token=token)
+	manager = Manager.objects.all()[0]
+
+	meeting = Meeting.objects.create(name=json['name'], surname=json['surname'], longitude=longitude, latitude=latitude, time=time, token=token, manager=manager)
 	meeting.save()
 
 	return JsonResponse({'status':'ok'})
@@ -132,7 +136,7 @@ def get_managers(request):
 	managers = Manager.objects.all()
 	managers_json = []
 	for i in managers:
-		managers_json.append({'name':i.name, 'surname':i.surname})
+		managers_json.append({'name':i.name, 'surname':i.surname, 'phone':i.phone, 'token':i.token})
 
 	return JsonResponse({'managers':managers_json})
 
@@ -184,3 +188,71 @@ def get_path(request):
 		points.append((i.longitude, i.latitude))
 
 	return HttpResponse(str(points))
+
+def delete_manager(request):
+	if request.method != 'POST':
+		return JsonResponse(get_error(f'Wrong method: {request.method}'))
+
+	json = get_json(request)
+	if not json:
+		return JsonResponse(get_error('Invalid JSON'))
+
+	if 'token' not in json:
+		return JsonResponse(get_error('Field "token" not found'))
+
+	manager = Manager.objects.get(token=json['token'])
+
+	if manager == None:
+		return JsonResponse(get_error('Token is invalid'))
+
+	manager.delete()
+
+	return JsonResponse({'status':'ok'})
+
+def authorize(request):
+	if request.method != 'POST':
+		return JsonResponse(get_error(f'Wrong method: {request.method}'))
+
+	json = get_json(request)
+	if not json:
+		return JsonResponse(get_error('Invalid JSON'))
+
+	if 'name' not in json:
+		return JsonResponse(get_error('Field "name" not found'))
+	if 'surname' not in json:
+		return JsonResponse(get_error('Field "surname" not found'))
+
+	manager = Manager.objects.get(name=json['name'], surname=json['surname'])
+
+	if manager == None:
+		return JsonResponse(get_error('Manager not found'))
+
+	return JsonResponse({'token':manager.token})
+
+def get_meetings_for_day(request):
+	if request.method != 'POST':
+		return JsonResponse(get_error(f'Wrong method: {request.method}'))
+
+	json = get_json(request)
+	if not json:
+		return JsonResponse(get_error('Invalid JSON'))
+
+	if 'token' not in json:
+		return JsonResponse(get_error('Field "token" not found'))
+	if 'time' not in json:
+		return JsonResponse(get_error('Field "time" not found'))
+
+	manager = Manager.objects.get(token=json['token'])
+	if manager == None:
+		return JsonResponse(get_error('Invalid token'))
+
+	meetings = Meeting.objects.filter(manager=manager)
+	day = datetime.datetime.fromtimestamp(json['time']).date
+
+	meetings_day = []
+
+	for i in meetings:
+		if i.time.date == day:
+			meetings_day.append({'name':i.name, 'surname':i.surname, 'address':i.address, 'longitude':i.longitude, 'latitude':i.latitude, 'time':i.time})
+
+	return JsonResponse({'meetings':meetings_day})
