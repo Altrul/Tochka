@@ -130,6 +130,9 @@ def get_manager_meetings(request):
 	for i in meetings:
 		meetings_json.append({'name':i.name, 'surname':i.surname, 'time':int(i.time.timestamp())})
 
+	print(meetings_json)
+	print(token, manager.token)
+
 	return JsonResponse({'meetings':meetings_json})
 
 def get_managers(request):
@@ -250,12 +253,12 @@ def get_meetings_for_day(request):
 		return JsonResponse(get_error('Invalid token'))
 
 	meetings = Meeting.objects.filter(manager=manager)
-	day = datetime.datetime.fromtimestamp(json['time']).date
+	day = datetime.datetime.fromtimestamp(json['time']).date()
 
 	meetings_day = []
 
 	for i in meetings:
-		if i.time.date == day:
+		if i.time.date() == day:
 			meetings_day.append({'name':i.name, 'surname':i.surname, 'address':i.address, 'longitude':i.longitude, 'latitude':i.latitude, 'time':i.time})
 
 	return JsonResponse({'meetings':meetings_day})
