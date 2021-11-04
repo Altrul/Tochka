@@ -6,9 +6,12 @@ import uuid
 from random import getrandbits
 import datetime
 import json
+from geopy.geocoders import Nominatim
 
 from .models import Manager
 from .models import Meeting
+
+geolocator = Nominatim(user_agent="tochka")
 
 def get_json(request):
 	try:
@@ -22,6 +25,12 @@ def generate_token():
 def get_error(string):
 	return {'status':'error', 'error':string}
 
+def locate(address):
+	location = geolocator.geocode(address)
+	if location == None:
+		return None
+	return location.longitude, location.latitude
+
 def index(request):
 	return HttpResponse('OK')
 
@@ -29,14 +38,18 @@ def add_manager(request):
 	if request.method != 'POST':
 		return JsonResponse(get_error(f'Wrong method: {request.method}'))
 
-	if 'name' not in request.POST:
+	json = get_json(request)
+	if not json:
+		return JsonResponse(get_error('Invalid JSON'))
+
+	if 'name' not in json:
 		return JsonResponse(get_error('Field "name" not found'))
-	if 'surname' not in request.POST:
+	if 'surname' not in json:
 		return JsonResponse(get_error('Field "surname" not found'))
 
 	manager_token = generate_token()
 
-	manager = Manager.objects.create(name=request.POST['name'], surname=request.POST['surname'], token=manager_token)
+	manager = Manager.objects.create(name=json['name'], surname=json['surname'], token=manager_token)
 
 	manager.save()
 
@@ -58,10 +71,12 @@ def create_meeting(request):
 		return JsonResponse(get_error('Field "surname" not found'))
 	if 'time' not in json:
 		return JsonResponse(get_error('Field "time" not found'))
+	if 'address' not in json:
+		return JsonResponse(get_error('Field "address" not found'))
 
 	if not json['time'].isdecimal():
 		return JsonResponse(get_error(f'Field "time" is invalid: {json["time"]}'))
-	time = datetime.datetime.fromtimestamp(int(request.POST['time']))
+	time = datetime.datetime.fromtimestamp(int(json['time']))
 	# manager = Manager.objects.get(token=manager_token).all()
 
 	# if len(manager) == 0:
@@ -71,7 +86,14 @@ def create_meeting(request):
 
 	token = b64encode(randbytes(32)).replace('/', '+').replace('-', '_')
 
-	meeting = Meeting.objects.create(json, time=time, token=token)
+	location = locate(json['address'])
+
+	if location == None:
+		return JsonResponse(get_error(f'Field "address" is invalid:{json["address"]}'))
+
+	longitude, latitude = location
+
+	meeting = Meeting.objects.create(name=json['name'], surname=json['surname'], longitude=longitude, latitude=latitude, time=time, token=token)
 	meeting.save()
 
 	return JsonResponse({'status':'ok'})
@@ -80,12 +102,14 @@ def get_manager_meetings(request):
 	if request.method != 'POST':
 		return JsonResponse(get_error(f'Wrong method: {request.method}'))
 
+	json = get_json(request)
+	if not json:
+		return JsonResponse(get_error('Invalid JSON'))
 
-
-	if 'token' not in request.POST:
+	if 'token' not in json:
 		return JsonResponse(get_error('Field "token" not found'))
 
-	token = request.POST['token']
+	token = json['token']
 
 	manager = Manager.objects.get(token=token)
 
@@ -98,8 +122,6 @@ def get_manager_meetings(request):
 
 	for i in meetings:
 		meetings_json.append({'name':i.name, 'surname':i.surname, 'time':int(i.time.timestamp())})
-
-	print(meetings_json)
 
 	return JsonResponse({'meetings':meetings_json})
 
@@ -118,4 +140,47 @@ def bind_meeting_to_manager(request):
 	if request.method != 'POST':
 		return JsonResponse(get_error(f'Wrong method: {request.method}'))
 
-	mee
+	json = get_json(request)
+	if not json:
+		return JsonResponse(get_error('Invalid JSON'))
+
+	if 'meeting_id' not in json:
+		return JsonResponse(get_error('Field "meeting_id" not found'))
+	if 'token' not in json:
+		return JsonResponse(get_error('Field "token" not found'))
+
+	meeting = Meeting.objects.get(token=json['meeting_id'])
+	manager = Manager.objects.get(token=json['token'])
+
+	meeting.manager = manager
+	meeting.save()
+
+	return JsonResponse({'status':'ok'})
+
+def get_meeting(request):
+	if request.method != 'POST':
+		return JsonResponse(get_error(f'Wrong method: {request.method}'))
+
+	json = get_json(request)
+	if not json:
+		return JsonResponse(get_error('Invalid JSON'))
+
+	if 'meeting_id' not in json:
+		return JsonResponse(get_error('Field "meeting_id" not found'))
+
+	meeting = Meeting.objects.get(token=json['meeting_id'])
+
+	return JsonResponse({'name':meeting.name, 'surname':meeting.surname, 'time':meeting.time.timestamp()})
+
+def get_path(request):
+	meetings = []
+
+	for i in Meeting.objects.all():
+		meetings.append({'name':i.name, 'surname':i.surname, 'time':int(i.time.timestamp()), 'longitude':i.longitude, 'latitude':i.latitude})
+
+	points = []
+
+	for i in meetings:
+		points.append((i.longitude, i.latitude))
+
+	return HttpResponse(str(points))

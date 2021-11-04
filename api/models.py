@@ -11,3 +11,6 @@ class Meeting(models.Model):
 	time = models.DateTimeField()
 	name = models.CharField(max_length=256, default='name')
 	surname = models.CharField(max_length=256, default='surname')
+	longitude = models.FloatField(default=0.0)
+	latitude = models.FloatField(default=0.0)
+	address = models.CharField(max_length=256, default='')
