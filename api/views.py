@@ -15,7 +15,10 @@ geolocator = Nominatim(user_agent="tochka")
 
 def get_json(request):
 	try:
-		return json_loads(request.body)
+		json = json_loads(request.body)
+		if type(json) == dict:
+			return json
+		return None
 	except:
 		return None
 
