@@ -221,38 +221,38 @@ def get_meeting(request):
 def get_path(request):
 	global PATHS
 
-	if PATHS != []:
-		meetings = Meeting.objects.all()
-		paths = []
-		lengths = []
-		tokens = []
+	# if PATHS != []:
+	# 	meetings = Meeting.objects.all()
+	# 	paths = []
+	# 	lengths = []
+	# 	tokens = []
 
-		for i in range(len(meetings)):
-			if meetings[i].manager_token in tokens:
-				paths[tokens.index(meetings[i].manager_token)].append(i)
-			else:
-				paths.append([i,])
-				tokens.append(meetings[i].manager_token)
-				lengths.append(0)
+	# 	for i in range(len(meetings)):
+	# 		if meetings[i].manager_token in tokens:
+	# 			paths[tokens.index(meetings[i].manager_token)].append(i)
+	# 		else:
+	# 			paths.append([i,])
+	# 			tokens.append(meetings[i].manager_token)
+	# 			lengths.append(0)
 
-		for i in range(len(paths)):
-			a = []
-			for j in range(len(paths[i])):
-				a.append([meetings[paths[i][j]].time, paths[i][j]])
-			a = sorted(a)
-			for j in range(len(a)):
-				paths[i][j] = a[j][1]
+	# 	for i in range(len(paths)):
+	# 		a = []
+	# 		for j in range(len(paths[i])):
+	# 			a.append([meetings[paths[i][j]].time, paths[i][j]])
+	# 		a = sorted(a)
+	# 		for j in range(len(a)):
+	# 			paths[i][j] = a[j][1]
 
-		for i in range(len(paths)):
-			lengths[i] = dist((37.647971, 55.745463), (meetings[paths[i][0]].longitude, meetings[paths[i][0]].latitude))
-			for j in range(1, len(paths[i])):
-				lengths[i] += dist((meetings[paths[i][j - 1]].longitude, meetings[paths[i][j - 1]].latitude), (meetings[paths[i][j]].longitude, meetings[paths[i][j]].latitude))
+	# 	for i in range(len(paths)):
+	# 		lengths[i] = dist((37.647971, 55.745463), (meetings[paths[i][0]].longitude, meetings[paths[i][0]].latitude))
+	# 		for j in range(1, len(paths[i])):
+	# 			lengths[i] += dist((meetings[paths[i][j - 1]].longitude, meetings[paths[i][j - 1]].latitude), (meetings[paths[i][j]].longitude, meetings[paths[i][j]].latitude))
 
-		for i in range(len(tokens)):
-			manager = Manager.objects.get(token=tokens[i])
-			manager.distance += lengths[i]
-			manager.meeting_count += len(paths[i])
-			manager.save()
+	# 	for i in range(len(tokens)):
+	# 		manager = Manager.objects.get(token=tokens[i])
+	# 		manager.distance += lengths[i]
+	# 		manager.meeting_count += len(paths[i])
+	# 		manager.save()
 
 	meetings = []
 
@@ -407,7 +407,7 @@ def get_all_meetings(request):
 
 def generate_meetings(request):
 	for i in range(40):
-		start = (55.745463, 37.647971)
+		start = (37.647971, 55.745463)
 		longitude, latitude = start[0] + uniform(-0.1, 0.1), start[1] + uniform(-0.1, 0.1)
 		data_i = data[i]
 		a = data_i[0].split(' ')
@@ -415,7 +415,7 @@ def generate_meetings(request):
 			name, surname = a[1], a[3]
 		else:
 			name, surname = a[0], a[2]
-		meeting = Meeting.objects.create(name=name, surname=surname, token=str(uniform(0, 1)), time=datetime.datetime(2021, 11, 5, randint(9, 16), randint(0, 59)), longitude=longitude, latitude=latitude, address=data_i[1], phone=generate_phone())
+		meeting = Meeting.objects.create(name=name, surname=surname, token=str(uniform(0, 1)), time=datetime.datetime(2021, 11, 6, randint(9, 16), randint(0, 59)), longitude=longitude, latitude=latitude, address=data_i[1], phone=generate_phone())
 		meeting.save()
 
 	return JsonResponse({'status':'ok'})
